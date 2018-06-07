@@ -1,7 +1,13 @@
 radians(degmin(Deg, Min), Y) :-
   Y is (Deg + (Min/60))*pi/180.
 
-haversine_distance(degmin(Deg1, Min1), degmin(Deg2, Min2), degmin(Deg3, Min3), degmin(Deg4, Min4), X) :-
+to_upper( Lower, Upper) :-
+   atom_chars( Lower, Lowerlist),
+   maplist( lower_upper, Lowerlist, Upperlist),
+   atom_chars( Upper, Upperlist).
+
+haversine_distance(degmin(Deg1, Min1), degmin(Deg2, Min2),
+                   degmin(Deg3, Min3), degmin(Deg4, Min4), X) :-
   radians(degmin(Deg1, Min1), Lat1),
   radians(degmin(Deg2, Min2), Lon1),
   radians(degmin(Deg3, Min3), Lat2),
@@ -25,28 +31,16 @@ ispath2(L, M, Path) :-
   not( member( X, Path )),
   ispath2(X, M, [L|Path]).
 
+/* Self Explanatory */
+to_hours( Hours, Minutes, HM ) :-
+   HM is Hours + Minutes / 60.
+
+to_minutes( Hours, Minutes ) :-
+   Minutes is Hours * 60.
+
 /*Converts decimal hour to minutes*/
 convertDHour(Hour, Min) :-
   Min is truncate(60*Hour).
-
-concatStr(Str1, Str2, Out) :-
-  name(Str1, StrList1),
-  name(Str2, StrList2),
-  append(StrList1, StrList2, StrList3),
-  name(Out, StrList3).
-
-getStringRep(time(H,M), Out) :-
-  M =:= 0, concatStr(H,":",Out1),
-  concatStr(Out1,"00",Out).
-
-getStringRep(time(H,M), Out) :-
-  M < 10, concatStr(H,":",Out1),
-  concatStr(Out1,"0",Out2),
-  concatStr(Out2,M,Out).
-
-getStringRep(time(H,M), Out) :-
-  concatStr(H,":",Out1),
-  concatStr(Out1,M,Out).
 
 convertToHourMin(Hour, time(H,M)) :-
   Min is truncate(60*Hour),
@@ -70,47 +64,71 @@ findAirtime(Head, Head2, Airtime) :-
   haversine_distance(Lat1, Lon1, Lat2, Lon2, Distance),
   Airtime is Distance/500.
 
-writepath( [_] ) :-
-   nl.
+format_time(Time) :-
+  Time < 10,
+  write('0'),write(Time).
+format_time(Time) :- write(Time).
 
-writepath(List) :-
-  [Head|Tail] = List,
-  [Head2|_] = Tail,
-  findAirtime(Head, Head2, Airtime),
-  convertToHourMin(Airtime, time(Airhour, Airmin)),
-  flight(Head, Head2, time(Departh,Departm)),
-  addTimes(time(Departh, Departm), time(Airhour, Airmin), time(Arrivalh, Arrivalm)),
-  /*Arrivalh is Departh + Airhour,
-  Arrivalm is Departm + Airmin,*/
-  getStringRep(time(Departh, Departm), DepartTime),
-  getStringRep(time(Arrivalh, Arrivalm), ArrivalTime),
-  airport(Head, Name1, _,_),
-  airport(Head2, Name2, _,_),
-  format('depart ~w ~w ~w~n', [Head, Name1, DepartTime]),
-  format('arrive ~w ~w ~w~n', [Head2, Name2, ArrivalTime]),
-  writepath(Tail).
+print_time( HoursMinutes ) :-
+    Hours is floor( HoursMinutes * 60 ) // 60,
+    Minutes is floor( HoursMinutes * 60 ) mod 60,
+    format_time(Hours),write(':'),format_time(Minutes).
 
-checkTime(time(-1, -1), _).
-checkTime(_, time(-1, -1)).
+arrival_time(flight(Airport1, Airport2, time(DH, DM)), ArrivalTime) :-
+  findAirtime(Airport1, Airport2, FlightTime),
+  DepartureTime is DH + DM/60,
+  ArrivalTime is DepartureTime + FlightTime.
 
-checkTime(time(Hlast, Mlast), time(Hnew, Mnew)) :-
-  Hlast > Hnew.
-checkTime(time(Hlast, Mlast), time(Hnew, Mnew)) :- Hlast =:= Hnew, Mlast > Mnew.
+/* Write the first path available */
+writepath( [] ).
 
-listpath( Node, Node, _, [Node],_).
-listpath(Node, End, [Node], List, _) :-
-  flight(Node, End, _),
-  List = [Node,End].
-listpath( Node, End, Tried, [Node|List], time(Hlast,Mlast)) :-
-   flight( Node, Next,_),
-   not( member( Next, Tried )),
-   flight(Node, Next, time(Hnew, Mnew)),
-   findAirtime(Node, Next, Airtime),
-   convertToHourMin(Airtime, AirtimeHourMin),
-   addTimes(time(Hnew, Mnew), AirtimeHourMin, NextTime),
-   write(time(Hnew, Mnew)), write(' '), write(time(Hlast, Mlast)), nl,
-   listpath( Next, End, [Next|Tried], List, NextTime).
+writepath( [flight(Depart, Arrive, time(DH, DM))|List]) :-
+   airport( Depart, DName, _, _),
+   airport( Arrive, AName, _, _),
+   to_hours( DH, DM, DepartTime ),
+   arrival_time( flight(Depart, Arrive, time(DH, DM)), ArrivalTime),
+   to_upper(Depart, UDepart),
+   to_upper(Arrive, UArrive),
+   format( 'depart   ~w    ~w', [UDepart, DName]),
+   print_time( DepartTime ), nl,
+   format( 'arrive   ~w    ~w', [UArrive, AName]),
+   print_time( ArrivalTime ), nl,
+   writepath( List ).
+
+checktime( H1, time( TH1, TM1 )) :-
+   to_hours( TH1, TM1, H2 ),
+   to_minutes( H1, M1 ),
+   to_minutes( H2, M2 ),
+   M1 + 29 < M2.
+
+checkarrival( flight( Dep,Arr,DepTime )) :-
+  arrival_time( flight( Dep,Arr,DepTime ), ArrivTime ),
+  ArrivTime < 24.
+
+/* Generate a list of a path from Node to End */
+listpath( Node, End, [flight( Node, Next, NDep)|Outlist] ) :-
+   not(Node = End),
+   flight(Node, Next, NDep),
+   listpath( Next, End, [flight( Node, Next, NDep)], Outlist ).
+listpath( Node, Node, _, [] ).
+listpath( Node, End,
+   [flight( PDep, PArr, PDepTime )| Tried],
+   [flight( Node, Next, NDep )| List] ) :-
+   flight( Node, Next, NDep),
+   arrival_time( flight( PDep, PArr, PDepTime ), PArriv),
+   checktime( PArriv, NDep ),
+   checkarrival( flight( Node, Next, NDep )),
+   Tried2 = append( [flight( PDep, PArr, PDepTime )], Tried ),
+   not( member( Next, Tried2 )),
+   not( Next = PArr ),
+   listpath( Next, End,
+   [flight( Node, Next, NDep )|Tried2],
+   List ).
 
 fly(From, To) :-
-  listpath(From, To, [From], List, time(-1,-1)),
-  writepath(List).
+  listpath(From, To, List),
+  nl,
+  writepath(List),!.
+fly(From, From):-
+  write('Both departure and destination airports are the same.'), !,
+  fail.

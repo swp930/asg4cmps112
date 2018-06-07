@@ -1,0 +1,36 @@
+GNU Prolog 1.4.4 (64 bits)
+Compiled Nov  6 2014, 18:04:28 with gcc
+By Daniel Diaz
+Copyright (C) 1999-2013 Daniel Diaz
+| ?- $Id: group1.tests,v 1.2 2016-11-21 14:06:16-08 - - $
+
+(1 ms) yes
+| ?- compiling /afs/cats.ucsc.edu/users/x/swdpatil/cmps112/Lab4/asg4cmps112/database.pl for byte code...
+/afs/cats.ucsc.edu/users/x/swdpatil/cmps112/Lab4/asg4cmps112/database.pl compiled, 76 lines read - 11193 bytes written, 9 ms
+
+(1 ms) yes
+| ?- compiling /afs/cats.ucsc.edu/users/x/swdpatil/cmps112/Lab4/asg4cmps112/functions.pl for byte code...
+/afs/cats.ucsc.edu/users/x/swdpatil/cmps112/Lab4/asg4cmps112/functions.pl compiled, 134 lines read - 17863 bytes written, 11 ms
+
+(3 ms) yes
+| ?- 
+depart   LAX    Los Angeles     12:00
+arrive   ATL    Atlanta         15:53
+depart   ATL    Atlanta         18:30
+arrive   MIA    Miami           19:41
+
+(1 ms) yes
+| ?- 
+
+no
+| ?- 
+depart   BOS    Boston-Logan    07:30
+arrive   NYC    New York City   07:52
+depart   NYC    New York City   11:00
+arrive   CHI    Chicago         12:27
+
+yes
+| ?- 
+
+(1 ms) no
+| ?- 
